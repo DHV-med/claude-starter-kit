@@ -1,0 +1,8 @@
+{
+  "name": "dhv-team",
+  "description": "DHV starter kit for Claude: team rules in Hebrew by default, /start to set it up, /guide, /check before sending, /handoff with an automatic stop when a chat gets long, clear chat titles, plus /bulletproof, /context-coach, and /ship-check and /new-tool for tool builders",
+  "version": "2.3.0",
+  "author": {
+    "name": "Dan Ofek"
+  }
+}

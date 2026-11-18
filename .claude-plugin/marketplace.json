@@ -1,0 +1,16 @@
+{
+  "name": "dhv-med",
+  "metadata": {
+    "description": "DHV's starter kit for Claude: team rules, set-up, a guide, a check before sending, and notes that keep long chats from using up the usage limit"
+  },
+  "owner": {
+    "name": "DHV-med innovation team"
+  },
+  "plugins": [
+    {
+      "name": "dhv-team",
+      "source": "./plugins/dhv-team",
+      "description": "DHV starter kit for Claude: team rules in Hebrew by default, /start to set it up, /guide, /check before sending, /handoff with an automatic stop when a chat gets long, clear chat titles, plus /bulletproof, /context-coach, and /ship-check and /new-tool for tool builders"
+    }
+  ]
+}
