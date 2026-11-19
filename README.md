@@ -108,3 +108,5 @@ Opening a DHV-med tool repo also offers the kit by itself.
   while any of them fails; `--build` then writes `dist/dhv-team-<version>.zip`.
 
 Maintainer: Dan Ofek.
+
+**Owner:** Dan Ofek
