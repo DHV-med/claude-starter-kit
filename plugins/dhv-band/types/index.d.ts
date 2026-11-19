@@ -33,6 +33,8 @@ declare module 'claude-code' {
       /** True after an error reading usage: the row stays empty. */
       isBroken: boolean
       isHidden: boolean
+      /** True until the person finished a first /start stage: the band offers a Start button. */
+      needsStart: boolean
       warm: Shaped<Warm>
     }
   }

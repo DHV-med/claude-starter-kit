@@ -21,6 +21,8 @@ export const WORDS = {
     keepWarmOn: 'Keep warm: on',
     handoff: 'Notes + new chat',
     noHandoff: 'The /handoff command is not set up on this computer.',
+    start: 'Start',
+    noStart: 'The /start command is not set up on this computer.',
     hidden: 'The band is hidden. Type /band show to bring it back.',
     shown: 'The band is shown.',
     usage: 'Use /band hide or /band show.',
@@ -34,6 +36,8 @@ export const WORDS = {
     keepWarmOn: 'שמור חם: פועל',
     handoff: "סיכום + צ'אט חדש",
     noHandoff: 'הפקודה /handoff לא מותקנת במחשב הזה.',
+    start: 'התחלה',
+    noStart: 'הפקודה /start לא מותקנת במחשב הזה.',
     hidden: 'השורה מוסתרת. כדי להחזיר אותה: /band show',
     shown: 'השורה מוצגת.',
     usage: 'אפשר /band hide או /band show.',
@@ -100,6 +104,28 @@ export function langFromSettings(text: string): Lang {
   const parsed: unknown = JSON.parse(text)
   if (typeof parsed !== 'object' || parsed === null) return 'he'
   return (parsed as Record<string, unknown>).language === 'en' ? 'en' : 'he'
+}
+
+/**
+ * True while the person has not finished a single /start stage: no
+ * tour.done entries in dhv-kit.json. Throws on bad JSON (the caller then
+ * keeps the button away rather than nag on a broken file).
+ */
+export function needsStartFromSettings(text: string): boolean {
+  const parsed: unknown = JSON.parse(text)
+  if (typeof parsed !== 'object' || parsed === null) return true
+  const tour = (parsed as Record<string, unknown>).tour
+  if (typeof tour !== 'object' || tour === null) return true
+  const done = (tour as Record<string, unknown>).done
+  return !Array.isArray(done) || done.length === 0
+}
+
+/**
+ * The registered name of a command: plain ("start") or with its plugin in
+ * front ("dhv-team:start"), depending on how the app lists plugin skills.
+ */
+export function commandName(names: ReadonlyArray<string>, want: string): string | null {
+  return names.find(n => n === want) ?? names.find(n => n.endsWith(':' + want)) ?? null
 }
 
 /** Milliseconds of warmth left (negative once cold). */

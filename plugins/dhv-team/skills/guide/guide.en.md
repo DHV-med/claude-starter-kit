@@ -4,34 +4,23 @@
 | The work | Where |
 |---|---|
 | A question, an idea, a draft email, a pasted document to read | Chat |
-| Work on files on your computer (a folder, Excel, Word, slides), scripts, tools, code | The Code tab |
-| Standing documents you keep asking about (procedures, templates) | A Project holding only those documents |
+| Work on files on your computer (a folder, Excel, Word, slides), standing documents you keep coming back to (procedures, templates), scripts, tools, code | The Code tab |
 
-## Three habits
-1. **New task → notes, then a new chat.** In the Code tab: type `/handoff`, then open a new chat. In Chat:
-   ask "summarise what we did for a new chat" and paste the summary into a new chat. A question about what
-   was just done is not a new task.
-2. **Same task → keep going.** In the Code tab the kit tells you when the chat has grown too long. In Chat:
-   when it holds files, runs very long, or your usage in Settings → Usage climbs fast, move to a new chat
-   with a summary.
+## Three habits (in the Code tab)
+1. **New task → notes, then a new chat.** Type `/handoff`, then open a new chat.
+2. **Same task → keep going.** The kit tells you when the chat has grown too long.
 3. **Before a break of an hour or more → notes.** Come back to a new chat that starts from them.
 
 ## More ways to save usage
-- **Model:** Sonnet for routine work, Opus when the work needs judgement. Pick it when you open the chat,
-  not halfway through. Fable uses far more: only with a reason.
-- **Effort, in the Code tab:** low or medium for routine work.
-- **Heavy tools only when needed:** Research, web search, file creation, connectors (links to other
-  services).
-- **Attach little:** only the file or pages you need. Text beats a screenshot unless the look matters.
-- **Fix, don't pile on:** an answer went the wrong way? Edit your earlier message and send it again (in the Code tab: `/rewind`).
+- **Model:** Sonnet for routine work, Opus when the work needs judgement. **Pick it when you open the chat, not halfway through.**
+- **Fable:** only for especially hard challenges.
+- **Effort:** low or medium for routine work.
 
 ## What the kit does by itself (in the Code tab)
-- Gives Claude the team rules in every chat: replies in your language, keeps client data and passwords out of shared code,
-  explains terms.
+- Gives Claude the team rules in every chat: replies in your language, keeps client data and passwords out of shared code, explains terms.
 - Gives chats clear titles in the app, so you can find them again.
 - Offers `/check` before you send something out.
-- When Python is on the computer: stops a chat that has grown long and saves notes, and
-  holds back the first message to a long chat that sat for a long time (sending again goes through).
+- When Python is on the computer: stops a chat that has grown long and saves notes, and holds back the first message to a long chat that sat for a long time (sending again goes through).
 - Tells you when a chat has no work folder, so your notes are never saved somewhere they get lost.
 - Keeps answers short and to the point, with a bottom line when they run long (switch it off in `/start`).
 - Reminds Claude to look for what already exists before building something new.
@@ -41,7 +30,7 @@
 - The company's Claude admin can see how much you use and nothing else.
 
 ## What stays with you
-Picking the model, opening a new chat in time, and checking yourself whatever goes to a client.
+Picking the model, opening a new chat in time, **and checking yourself whatever goes to a client.**
 
 ## The commands
 The commands work in the Code tab.
@@ -52,14 +41,13 @@ The commands work in the Code tab.
 | `/guide` | This guide |
 | `/handoff` | Notes for a new chat, and the lists of open items and decisions |
 | `/check` | A check before sending: numbers, client details, sources, wording |
-| `/bulletproof` | Find the holes in a plan before building it |
-| `/context-coach` | Where your usage goes, and up to three fixes |
+| `/bulletproof` | A deep check of a plan before building it: alternatives, weak points, what was forgotten |
+| `/context-coach` | Use your tokens more efficiently |
 | `/kickoff` | Start a new piece of work: what already exists, the smallest version, a rough plan |
-| `/market-scan` | Who already sells this? A wide look before building anything |
+| `/market-scan` | Does a solution already exist? A wide look before building anything |
 | `/qa` | A careful check of the work in front of you: against the request, Hebrew layout, Excel and Word, counts |
-| `/humanizer` | Rewrite text that sounds like AI so it reads like you |
+| `/humanizer` | Rewrite text that sounds like AI so it sounds human |
 | `/tired` | Very short answers for the rest of the chat |
-| `/goal-draft` | Word a goal Claude can finish on its own |
 
 ## Switching off, removing, feedback
 - Switch part of the kit off: `/start` and choose what to turn off. Undo the introduction: `/start undo`.

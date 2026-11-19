@@ -24,8 +24,8 @@ by itself. (Claude in the browser, Excel, Word or PowerPoint doesn't use it.)
   what already exists before building; and, in a folder that already uses git, a local save of every
   file Claude edits (nothing leaves your computer).
 - **A row above the prompt** showing how long Claude still remembers the chat cheaply and how full the
-  chat is, with a button for notes and a new chat.
-- **`/kickoff`**, **`/market-scan`**, **`/qa`**, **`/humanizer`**, **`/tired`**, **`/goal-draft`**:
+  chat is, with a button for notes and a new chat, and a **Start** button until you have begun `/start`.
+- **`/kickoff`**, **`/market-scan`**, **`/qa`**, **`/humanizer`**, **`/tired`**:
   start a piece of work without rebuilding what exists, check it, and tidy its wording.
 - **`/guide`**: which tool for which job, and how to keep your usage limit for real work.
 - **`/check`** before you send something: numbers traced to a source, client details, invented
@@ -44,24 +44,23 @@ by itself. (Claude in the browser, Excel, Word or PowerPoint doesn't use it.)
 You need Claude Code working (the **Code** tab in the Claude app, or Claude Code in a terminal). No GitHub
 account is needed: the kit is public.
 
-1. In the **Code** tab, pick any folder and type these three lines, one at a time (the third adds the
-   row above the prompt and can be left out):
+1. In the **Code** tab, pick any folder and send Claude this message (copy it whole):
 
-       /plugin marketplace add DHV-med/claude-starter-kit
-       /plugin install dhv-team@dhv-med
-       /plugin install dhv-band@dhv-med
-
-2. Then send Claude this message:
-
-   > Finish setting up the DHV team kit: check that `python --version` shows Python 3 (if not, install it
-   > with `winget install -e --id Python.Python.3.13`), and in `~/.claude/settings.json` set
-   > `"autoUpdate": true` on the `dhv-med` marketplace entry, keeping everything else as it is.
+   > Install the DHV team kit. Find the newest `claude.exe` under `%LOCALAPPDATA%\Claude-Data\*\claude-code\`
+   > and run it with each of these, one at a time: `plugin marketplace remove dhv-med` (an error here is
+   > fine), `plugin marketplace add DHV-med/claude-starter-kit`, `plugin install dhv-team@dhv-med`,
+   > `plugin install dhv-band@dhv-med`. Then check that `python --version` shows Python 3 (if not, install
+   > it with `winget install -e --id Python.Python.3.13`), and in `~/.claude/settings.json` set
+   > `"autoUpdate": true` on the `dhv-med` marketplace entry, keeping everything else as it is. Tell me
+   > which dhv-team version is installed.
 
    If Windows asks for an administrator name and password while installing, stop and call IT.
-3. Close the Claude app completely and open it again, start a new chat and type `/start`. It walks you
-   through the set-up in a few short stages; every stage can be skipped. Until you run it, Claude
-   answers in Hebrew.
-4. `/guide` shows how to use Claude well and every command the kit adds.
+   (Typing `/plugin` in the app opens its plugin screen instead; the message above is the reliable way.
+   In Claude in a terminal the same four commands start with `claude`.)
+2. Close the Claude app completely and open it again, start a new chat and press **Start** in the row
+   above the prompt (or type `/start`). It walks you through the set-up in a few short stages; every
+   stage can be skipped. Until you run it, Claude answers in Hebrew.
+3. `/guide` shows how to use Claude well and every command the kit adds.
 
 Opening a DHV-med tool repo also offers the kit by itself.
 

@@ -6,7 +6,9 @@ import {
   MINUTE,
   chatText,
   clockText,
+  commandName,
   langFromSettings,
+  needsStartFromSettings,
   lifetimeFromTranscript,
 } from '../hooks/logic'
 
@@ -164,7 +166,37 @@ test('language setting', () => {
   expect(() => langFromSettings('{oops')).toThrow()
 })
 
+test('Start is offered until a first /start stage is done', () => {
+  expect(needsStartFromSettings('{}')).toBe(true)
+  expect(needsStartFromSettings('{"language":"en","tour":{"done":[]}}')).toBe(true)
+  expect(needsStartFromSettings('{"tour":{"done":["about"]}}')).toBe(false)
+  expect(() => needsStartFromSettings('{oops')).toThrow()
+})
+
+test('commands are found plain or under their plugin name', () => {
+  expect(commandName(['band', 'start'], 'start')).toBe('start')
+  expect(commandName(['dhv-team:start', 'dhv-team:handoff'], 'handoff')).toBe('dhv-team:handoff')
+  expect(commandName(['restart'], 'start')).toBeNull()
+})
+
 // ---- the band, mounted -----------------------------------------------------
+
+test('a new person sees Start in a fresh chat, on every surface', async ($, on) => {
+  await boot($, on, {})
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({ ...BAND, surface })
+    expect((await ui.find({ type: 'Button', key: 'start' }))?.text).toBe('התחלה')
+    await ui.unmount()
+  }
+})
+
+test('no Start once a /start stage is done', async ($, on) => {
+  await boot($, on, { settings: '{"language":"en","tour":{"done":["about"]}}' })
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find({ type: 'Button', key: 'start' })).toBeUndefined()
+  expect((await ui.find({ type: 'Text', text: /^chat/ }))?.text).toBe('chat 31%')
+  await ui.unmount()
+})
 
 test('English band counts down, then turns cold, on every surface', async ($, on) => {
   const { clock } = await boot($, on, {

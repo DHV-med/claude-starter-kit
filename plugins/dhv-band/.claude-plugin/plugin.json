@@ -1,6 +1,6 @@
 {
   "name": "dhv-band",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A quiet row above the prompt: how long the chat's short-term memory stays warm, how full the chat is, a keep-warm switch and a notes + new chat button",
   "author": {
     "name": "DHV"

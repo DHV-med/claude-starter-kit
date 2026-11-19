@@ -1,6 +1,7 @@
 // dhv-band: one quiet row above the prompt.
 // 1. how long the chat's short-term memory (the prompt cache) stays warm,
-// 2. how full the chat is, 3. a keep-warm switch, 4. a notes + new chat button.
+// 2. how full the chat is, 3. a keep-warm switch, 4. a notes + new chat button,
+// 5. a Start button (runs /start) until the person finished a first /start stage.
 // Every reader fails soft: an error leaves the row empty, never the chat broken.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
@@ -11,9 +12,11 @@ import {
   WORDS,
   chatText,
   clockText,
+  commandName,
   isRefreshDue,
   langFromSettings,
   lifetimeFromTranscript,
+  needsStartFromSettings,
   remainingMs,
   warmStopReason,
 } from './logic'
@@ -27,6 +30,7 @@ const nowAtom = atom({ plugin: 'dhv-band', key: 'now' } as const, 0)
 const lang = atom({ plugin: 'dhv-band', key: 'lang' } as const, 'he' as Lang | null)
 const isBroken = atom({ plugin: 'dhv-band', key: 'isBroken' } as const, false)
 const isHidden = atom({ plugin: 'dhv-band', key: 'isHidden' } as const, false)
+const needsStart = atom({ plugin: 'dhv-band', key: 'needsStart' } as const, false)
 const warm = atom({ plugin: 'dhv-band', key: 'warm' } as const, WARM_OFF as Warm, {
   shape: 'warm-1',
 })
@@ -60,14 +64,18 @@ async function loadLanguage($: $): Promise<void> {
     }
     const path = `${home.replace(/[\\/]+$/, '')}/.claude/dhv-kit.json`
     if (!(await $.fs.exists(path))) {
+      // no settings file: /start has never run
       await update($, lang, () => 'he')
+      await update($, needsStart, () => true)
       return
     }
     const text = await $.fs.read(path)
     await update($, lang, () => langFromSettings(text))
+    await update($, needsStart, () => needsStartFromSettings(text))
   } catch {
     // unreadable or malformed settings: the row stays empty
     await update($, lang, () => null).catch(() => undefined)
+    await update($, needsStart, () => false).catch(() => undefined)
   }
 }
 
@@ -124,6 +132,20 @@ async function tick($: $): Promise<void> {
   if ((await read($, ttl)) === null) await learnLifetime($)
   const left = remainingMs(now, last.at, await read($, ttl))
   await keepWarm($, now, left)
+}
+
+/** Run a kit command by name, or toast that it is missing. */
+async function runCommand($: $, want: string, missing: string): Promise<void> {
+  const commands = await $.command.list()
+  const name = commandName(
+    commands.map(c => c.name),
+    want,
+  )
+  if (name === null) {
+    $.ui.toast(missing)
+    return
+  }
+  void $.command.run({ command: name }).catch(() => $.ui.toast(missing))
 }
 
 async function switchWarmOff($: $): Promise<void> {
@@ -252,7 +274,8 @@ export const register: Register = on => {
     if (language === null || (await read($, isBroken))) return next(e)
     const last = await read($, reply)
     const fill = await read($, percent)
-    if (last === null && fill === null) return next(e)
+    const offerStart = await read($, needsStart)
+    if (last === null && fill === null && !offerStart) return next(e)
 
     const words = WORDS[language]
     const now = Math.max(await read($, nowAtom), last?.at ?? 0)
@@ -265,6 +288,17 @@ export const register: Register = on => {
 
     return (
       <Box flexDirection="row" gap={2}>
+        {offerStart && (
+          <Button
+            key="start"
+            label={words.start}
+            variant="primary"
+            onPress={async () => {
+              await update($, needsStart, () => false)
+              await runCommand($, 'start', words.noStart)
+            }}
+          />
+        )}
         {clock !== null && (
           <Text
             dir={dir}
@@ -299,12 +333,7 @@ export const register: Register = on => {
           dimColor
           onPress={async () => {
             await switchWarmOff($)
-            const commands = await $.command.list()
-            if (!commands.some(c => c.name === 'handoff')) {
-              $.ui.toast(words.noHandoff)
-              return
-            }
-            void $.command.run({ command: 'handoff' }).catch(() => $.ui.toast(words.noHandoff))
+            await runCommand($, 'handoff', words.noHandoff)
           }}
         />
       </Box>
