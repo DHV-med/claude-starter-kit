@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "dhv-med": {
+      "source": { "source": "github", "repo": "DHV-med/claude-plugins" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "dhv-team@dhv-med": true
+  }
+}
