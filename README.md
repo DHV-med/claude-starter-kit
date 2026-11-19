@@ -4,6 +4,9 @@ Install it once if you use Claude Code: the **Code** tab in the Claude app, or C
 keeps chats short enough that your usage limit lasts, and it carries the team's safety rules. It updates
 by itself. (Claude in the browser, Excel, Word or PowerPoint doesn't use it.)
 
+**Step-by-step tutorial (Hebrew):** https://claude.ai/artifact/PHpAjVxzq87HML73NUp5ZA (open it signed in to
+your DHV Claude account).
+
 ## What you get
 - **Team rules** Claude reads at the start of every chat: plain words, client data and passwords never
   in git, and the three habits below. Inside a DHV-med tool repo it also gets the tool rules (owner,
