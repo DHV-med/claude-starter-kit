@@ -51,5 +51,8 @@ The commands work in the Code tab.
 
 ## Switching off, removing, feedback
 - Switch part of the kit off: `/start` and choose what to turn off. Undo the introduction: `/start undo`.
-- Remove it completely: in the Code tab type `/plugin`, and remove dhv-team and dhv-band.
+- Remove it completely: run `/start undo` first, then in the Code tab send Claude this message:
+  "Remove the DHV team kit: run the newest `claude.exe` under `%LOCALAPPDATA%\Claude-Data\*\claude-code\`
+  with `plugin uninstall dhv-team@dhv-med`, then with `plugin uninstall dhv-band@dhv-med`." Then close the
+  app and open it again.
 - Feedback, a problem or an idea: write to Dan Ofek.

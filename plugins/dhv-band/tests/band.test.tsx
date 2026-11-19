@@ -86,6 +86,7 @@ async function boot($: Engine, on: On, w: World) {
   on('session.start', (_, e) => ({ cwd: e.cwd }))
   on('prompt.submit', (_, e) => ({ text: e.text }))
   on('classic.Stop', () => ({}))
+  on('turn.complete', () => ({ text: '' }))
   on('turn.step', async function* (_, e) {
     return {
       turnId: e.turnId,
@@ -359,4 +360,15 @@ test('keep warm gives up after 3 failed refreshes in a row', async ($, on) => {
   expect(await after.find({ type: 'Text', text: /^cold/ })).toBeDefined()
   expect(await after.find({ type: 'Button', key: 'keep-warm' })).toBeUndefined()
   await after.unmount()
+})
+
+test('the band switches to English once /start saves English, without a new chat', async ($, on) => {
+  const w: { settings?: string } = { settings: '{"language":"he","tour":{"done":["about"]}}' }
+  await boot($, on, w)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect((await ui.find({ type: 'Text', text: /%/ }))?.text).toBe("צ'אט 31%")
+  w.settings = '{"language":"en","tour":{"done":["about"]}}'
+  await $.turn.complete({ turnId: 't1', answer: '', durationMs: 1, isAborted: false, reason: 'answer' })
+  expect((await ui.find({ type: 'Text', text: /%/ }))?.text).toBe('chat 31%')
+  await ui.unmount()
 })

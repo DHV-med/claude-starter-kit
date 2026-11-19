@@ -67,6 +67,10 @@ account is needed: the kit is public.
 
 Opening a DHV-med tool repo also offers the kit by itself.
 
+**To remove the kit:** run `/start undo`, then send Claude in the Code tab: "Remove the DHV team kit: run
+the newest `claude.exe` under `%LOCALAPPDATA%\Claude-Data\*\claude-code\` with `plugin uninstall
+dhv-team@dhv-med`, then with `plugin uninstall dhv-band@dhv-med`." Close the app and open it again.
+
 ## For the maintainer
 - Lines depend on the seat: a Team seat hands off first at 200k tokens, then every 100k more; a
   gateway seat (small monthly budget) at 100k, then every 50k, and its usage line is a quarter of the

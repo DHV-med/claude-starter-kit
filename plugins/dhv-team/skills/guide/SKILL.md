@@ -1,6 +1,6 @@
 ---
 name: guide
-description: The DHV guide to using Claude well - which tool for which job, the three habits that keep the usage limit for real work, what the kit does by itself, how to switch parts off and send feedback. Use on /guide, "how do I use Claude", "what does the kit do", "which tool should I use", "מדריך", "איך משתמשים", "מה הקיט עושה".
+description: The DHV guide to using Claude well - which tool for which job, the three habits that keep the usage limit for real work, what the kit does by itself, how to switch parts off and send feedback. Use on /guide, "how do I use Claude", "what does the kit do", "which tool should I use", "מדריך", "איך משתמשים", "מה הערכה עושה", "מה הקיט עושה".
 argument-hint: a question about using Claude (optional)
 ---
 
