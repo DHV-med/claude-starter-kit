@@ -33,14 +33,47 @@ try {
     $rules = Get-Content -Raw -Encoding UTF8 "$root\rules\core.md"
     if ($rules) { $parts += $rules.Trim() }
     $lang = 'Hebrew'
+    $short = $true
     $conf = Join-Path $env:USERPROFILE '.claude\dhv-kit.json'    # same home Python's expanduser uses
     if (Test-Path $conf) {
         $c = Get-Content -Raw -Encoding UTF8 $conf | ConvertFrom-Json
         if ($c.language -eq 'en') { $lang = 'English' }
+        if ($c.short_replies -eq $false) { $short = $false }
+    }
+    if ($short) {
+        $style = Get-Content -Raw -Encoding UTF8 "$root\rules\reply-style.md"
+        if ($style) { $parts += $style.Trim() }
     }
     $parts += "This person's reply language (their kit settings): $lang. If they write in another language, answer in that one."
     $cwd = if ($ev.cwd) { $ev.cwd } else { (Get-Location).Path }
+    # A chat with no folder picked runs in a temp or catch-all place: say so, as no_work_folder() and
+    # NO_FOLDER_RULE do in handoff_gate.py (keep the two wordings the same).
+    $here = $cwd.TrimEnd('\', '/').ToLower()
+    $homeDir = $env:USERPROFILE.TrimEnd('\').ToLower()
+    $none = ($here -eq $homeDir) -or ($here.Length -le 2) -or (@("$homeDir\desktop", "$homeDir\documents", "$homeDir\downloads") -contains $here)
+    foreach ($b in @($env:TEMP, $env:TMP, "$homeDir\appdata\local\temp", "$homeDir\.claude")) {
+        if (-not $b) { continue }
+        $b = $b.TrimEnd('\').ToLower()
+        if ($here -eq $b -or $here.StartsWith($b + '\')) { $none = $true }
+    }
+    if ($none) {
+        $parts += 'This chat has no work folder: it runs in ' + $cwd + ', a temporary or catch-all place. Files written here can be lost, and notes saved here are not found by the next chat. Never write HANDOFF.md, OPEN.md or DECISIONS.md here. When the person starts work that will produce files or outlast this chat, tell them so once, in one plain line, and offer to pick a folder for it (in the desktop app: the folder picker, `request_directory` with no path, then `change_directory` to move this chat there; elsewhere: ask them to open Claude in that folder).'
+    }
+    # The nearest HANDOFF.md from here up to the top of the git repo; outside a repo, this folder only.
     $notes = Join-Path $cwd 'HANDOFF.md'
+    $d = $cwd
+    $chain = @()
+    while ($d) {
+        $chain += $d
+        if (Test-Path -LiteralPath (Join-Path $d '.git')) { break }
+        $up = Split-Path -Parent $d
+        if (-not $up -or $up -eq $d) { $chain = @($cwd); break }
+        $d = $up
+    }
+    foreach ($f in $chain) {
+        $candidate = Join-Path $f 'HANDOFF.md'
+        if (Test-Path -LiteralPath $candidate) { $notes = $candidate; break }
+    }
     if ((@($null, 'startup', 'clear') -contains $ev.source) -and (Test-Path -LiteralPath $notes)) {
         $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $notes
         # Claude Code caps a hook's output at 10,000 characters (past it the rules would be cut too),

@@ -1,7 +1,7 @@
 {
   "name": "dhv-med",
   "metadata": {
-    "description": "DHV's starter kit for Claude: team rules, set-up, a guide, a check before sending, and notes that keep long chats from using up the usage limit"
+    "description": "DHV's starter kit for Claude: team rules, a guided set-up, a guide, a check before sending, notes that keep long chats from using up the usage limit, and a row that shows how full a chat is"
   },
   "owner": {
     "name": "DHV-med innovation team"
@@ -10,7 +10,12 @@
     {
       "name": "dhv-team",
       "source": "./plugins/dhv-team",
-      "description": "DHV starter kit for Claude: team rules in Hebrew by default, /start to set it up, /guide, /check before sending, /handoff with an automatic stop when a chat gets long, clear chat titles, plus /bulletproof, /context-coach, and /ship-check and /new-tool for tool builders"
+      "description": "DHV starter kit for Claude: team rules in Hebrew by default, /start as a guided tour, /guide, /check before sending, /handoff with open items and decisions and an automatic stop when a chat gets long, short answers, clear chat titles, plus /kickoff, /market-scan, /qa, /humanizer, /bulletproof, /context-coach, and /ship-check and /new-tool for tool builders"
+    },
+    {
+      "name": "dhv-band",
+      "source": "./plugins/dhv-band",
+      "description": "A quiet row above the prompt: how long Claude still remembers the chat cheaply, how full the chat is, a keep-warm switch and a notes + new chat button"
     }
   ]
 }

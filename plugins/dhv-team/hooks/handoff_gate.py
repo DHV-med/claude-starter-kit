@@ -4,7 +4,10 @@
     python handoff_gate.py start    # SessionStart: the team rules; a fresh chat also gets HANDOFF.md
     python handoff_gate.py stop     # Stop: past the handoff line, block once and ask for HANDOFF.md
     python handoff_gate.py prompt   # UserPromptSubmit: hold back the first message to a long chat gone
-                                    # cold; after a handoff, a one-line nudge every 3rd message
+                                    # cold; after a handoff, a one-line nudge every 3rd message; the
+                                    # /market-scan reminder when the person asks what already exists
+    python handoff_gate.py closing  # PostToolUse (the desktop app's wrap-up tool): the short-reply test
+    python handoff_gate.py save     # PostToolUse (Edit, Write): a local git save point for the edited file
 
 Ported from Dan's own ~/.claude/hooks (handoff-gate.sh, cold-cache-gate.py). Standard library only;
 every mode fails open - a hook must never break a session. State lives in ~/.claude/state, not next to
@@ -47,9 +50,11 @@ BANNER_LINE = {
     "he": ("\U0001F6D1 **הסיכום נשמר ב-HANDOFF.md - הקלידו /clear כדי לפתוח צ'אט חדש; הוא ימשיך מהסיכום "
            "לבד.**"),
 }
-# Claude's own reply ends with one of these after a handoff. The last is Dan's personal banner.
+# Claude's own reply ends with one of these after a handoff. The third is Dan's personal banner; the
+# last two close a handoff in a chat with no work folder (the notes were given as a block to paste).
 BANNERS = ("\U0001F6D1 **Notes saved to HANDOFF.md", "\U0001F6D1 **הסיכום נשמר ב-HANDOFF.md",
-           "\U0001F6D1 **Handoff done (")
+           "\U0001F6D1 **Handoff done (", "\U0001F6D1 Open a new chat and paste the notes",
+           "\U0001F6D1 פתחו צ'אט חדש והדביקו את הסיכום")
 TAG = "Handoff line crossed"   # opening words of our own block reason; found again in the transcript
 
 HOME = os.path.expanduser("~")
@@ -59,7 +64,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The person's own switches, written by /start; this hook only reads them. Missing file or key = default.
 # A plugin update replaces the plugin folder, so the file lives in ~/.claude, not here.
 SETTINGS_FILE = os.path.join(HOME, ".claude", "dhv-kit.json")
-DEFAULTS = {"language": "he", "handoff_stop": True, "cold_hold": True, "seat": "team"}
+DEFAULTS = {"language": "he", "handoff_stop": True, "cold_hold": True, "seat": "team",
+            "short_replies": True, "auto_save": True}
 
 
 def settings():
@@ -113,6 +119,8 @@ TEXT = {
         "nudge": ("Each message in this chat now uses several times more of your usage limit than at the "
                   "start. Your notes are saved in HANDOFF.md - type /clear whenever you are ready and the "
                   "fresh chat carries on from them."),
+        "nudge_none": ("Each message in this chat now uses several times more of your usage limit than at the "
+                       "start. Open a new chat and paste the notes Claude gave you; it carries on from them."),
     },
     "he": {
         "minutes": "%d דקות", "hours": "%.0f שעות",
@@ -125,6 +133,8 @@ TEXT = {
                       "אם זה משהו חדש: שלחו קודם /handoff ואחר כך /clear."),
         "nudge": ("כל הודעה בצ'אט הזה צורכת עכשיו פי כמה ממכסת השימוש מאשר בהתחלה. הסיכום שמור ב-HANDOFF.md - "
                   "הקלידו /clear כשנוח לכם, והצ'אט החדש ימשיך ממנו."),
+        "nudge_none": ("כל הודעה בצ'אט הזה צורכת עכשיו פי כמה ממכסת השימוש מאשר בהתחלה. פתחו צ'אט חדש "
+                       "והדביקו בו את הסיכום ש-Claude נתן לכם; הוא ימשיך ממנו."),
     },
 }
 
@@ -134,6 +144,58 @@ def longpath(p):
     # logs for deep project folders get there. The \\?\ prefix lifts the limit for absolute paths.
     p = os.path.abspath(p)
     return "\\\\?\\" + p if os.name == "nt" and len(p) > 240 and not p.startswith("\\\\?\\") else p
+
+
+def find_handoff(cwd):
+    """Nearest HANDOFF.md from cwd up to the top of the git repo, so a chat opened in a subfolder still
+    gets the project's notes. Outside a repo: cwd only, never climbing into unrelated folders."""
+    d, chain = os.path.abspath(cwd), []
+    while True:
+        chain.append(d)
+        if os.path.exists(os.path.join(d, ".git")):
+            break
+        parent = os.path.dirname(d)
+        if parent == d:
+            chain = chain[:1]                    # no repo above: look in cwd only
+            break
+        d = parent
+    for folder in chain:
+        p = os.path.join(folder, "HANDOFF.md")
+        if os.path.isfile(longpath(p)):
+            return p
+    return None
+
+
+def no_work_folder(cwd):
+    """True when this chat runs where notes must never be written: a temp or scratch folder (cleared
+    without warning), the home folder and its catch-all folders (unrelated work would overwrite each
+    other's notes), the app's own folder, or a drive root. A chat opened with no folder picked lands in
+    one of these."""
+    def norm(p):
+        return os.path.normcase(os.path.abspath(p)).rstrip("\\/")
+    d, home = norm(cwd), norm(HOME)
+
+    def inside(parent):
+        parent = norm(parent)
+        return bool(parent) and (d == parent or d.startswith(parent + os.sep))
+    temps = [os.environ.get(k) for k in ("TEMP", "TMP", "TMPDIR")]
+    temps.append(os.path.join(HOME, "AppData", "Local", "Temp"))
+    if any(inside(t) for t in temps if t):
+        return True
+    if d == home or d in [norm(os.path.join(HOME, n)) for n in ("Desktop", "Documents", "Downloads")]:
+        return True
+    if inside(os.path.join(HOME, ".claude")):
+        return True
+    return len(d) <= 2                           # "c:" or "": a drive root
+
+
+NO_FOLDER_RULE = (
+    "This chat has no work folder: it runs in %s, a temporary or catch-all place. Files written here can "
+    "be lost, and notes saved here are not found by the next chat. Never write HANDOFF.md, OPEN.md or "
+    "DECISIONS.md here. When the person starts work that will produce files or outlast this chat, tell "
+    "them so once, in one plain line, and offer to pick a folder for it (in the desktop app: the folder "
+    "picker, `request_directory` with no path, then `change_directory` to move this chat there; "
+    "elsewhere: ask them to open Claude in that folder).")
 
 
 def levels(ctx, dollars, L):
@@ -313,12 +375,21 @@ def stop(ev):
         return
     seen.update(ctx=max(seen["ctx"], ctx_level), cost=max(seen["cost"], cost_level), prompts=0)
     write_marker(sid, seen)
-    reason = (
-        "%s (handoff line %d, usage line %d). This chat is now long: every message re-reads all of it "
-        "and uses up the person's usage limit, so the cheapest next step is a fresh chat that starts "
-        "from written notes. Start nothing new. Run the handoff skill now (it writes HANDOFF.md in the "
-        "project root) and end your reply with its closing line, exactly: %s"
-        % (TAG, seen["ctx"], seen["cost"], BANNER_LINE[conf["language"]]))
+    head = ("%s (handoff line %d, usage line %d). This chat is now long: every message re-reads all of it "
+            "and uses up the person's usage limit, so the cheapest next step is a fresh chat that starts "
+            "from written notes. Start nothing new. " % (TAG, seen["ctx"], seen["cost"]))
+    cwd = ev.get("cwd") or os.getcwd()
+    if no_work_folder(cwd):
+        # No folder was picked for this chat: notes written here would sit in a temp folder nobody finds.
+        reason = head + (
+            "Run the handoff skill now. This chat has no work folder (it runs in %s), so do not write the "
+            "notes to a file here: tell the person so in one plain line, offer to pick a folder for this "
+            "work, and otherwise give the notes as one block to paste into a new chat. End your reply "
+            "with the skill's closing line for the case that applied." % cwd)
+    else:
+        reason = head + (
+            "Run the handoff skill now (it writes HANDOFF.md in the work folder) and end your reply with "
+            "its closing line, exactly: %s" % BANNER_LINE[conf["language"]])
     print(json.dumps({"decision": "block", "reason": reason}))
 
 
@@ -369,14 +440,20 @@ def start(ev):
         pass
     cwd = ev.get("cwd") or os.getcwd()
     # Tool-repo rules only where they apply: elsewhere "git pull" or "/ship-check" would misfire.
-    out = [r for r in (read_rules("core.md"), dhv_repo(cwd) and read_rules("tool-repo.md")) if r]
-    lang = settings()["language"]
+    conf = settings()
+    # The reply style is the kit's default, not a team rule: a person who asked /start for fuller
+    # answers has short_replies off and does not get it.
+    out = [r for r in (read_rules("core.md"), conf["short_replies"] and read_rules("reply-style.md"),
+                       dhv_repo(cwd) and read_rules("tool-repo.md")) if r]
+    lang = conf["language"]
     out.append("This person's reply language (their kit settings): %s. If they write in another language, "
                "answer in that one." % {"he": "Hebrew", "en": "English"}[lang])
+    if no_work_folder(cwd):
+        out.append(NO_FOLDER_RULE % cwd)
     if ev.get("source") in (None, "startup", "clear") and "context-coach" not in own_hooks("SessionStart"):
         # Only a fresh chat gets the notes: a resumed or compacted one still has its thread, and the
         # personal context-coach copy already injects them.
-        path = longpath(os.path.join(cwd, "HANDOFF.md"))
+        path = longpath(find_handoff(cwd) or os.path.join(cwd, "HANDOFF.md"))
         if os.path.isfile(path):
             with open(path, encoding="utf-8", errors="ignore") as fh:
                 text = fh.read()
@@ -430,7 +507,8 @@ def cold(ev):
     os.makedirs(STATE, exist_ok=True)
     with open(path, "w", encoding="utf-8") as fh:
         fh.write(stamp)
-    notes = os.path.join(ev.get("cwd") or os.getcwd(), "HANDOFF.md")
+    here = ev.get("cwd") or os.getcwd()
+    notes = find_handoff(here) or os.path.join(here, "HANDOFF.md")
     # notes written at the end of the work, not before it went on
     current = os.path.isfile(longpath(notes)) and os.path.getmtime(longpath(notes)) >= then.timestamp() - 300
     away = t["minutes"] % idle if idle < 120 else t["hours"] % (idle / 60)
@@ -439,27 +517,118 @@ def cold(ev):
     return True
 
 
-def prompt(ev):
-    if cold(ev):
-        return
-    conf = settings()
+def nudge(ev, conf):
+    """After the long-chat stop fired: a one-line reminder every NUDGE_EVERY-th message, or None."""
     if not conf["handoff_stop"]:
-        return                                   # the nudges belong to the long-chat stop
+        return None                              # the nudges belong to the long-chat stop
     sid = ev.get("session_id")
     seen = read_marker(sid)
     if not seen:
-        return                                   # gate never fired in this chat
+        return None                              # gate never fired in this chat
     seen["prompts"] = seen.get("prompts", 0) + 1
     write_marker(sid, seen)
     if seen["prompts"] % NUDGE_EVERY:
+        return None
+    key = "nudge_none" if no_work_folder(ev.get("cwd") or os.getcwd()) else "nudge"
+    return TEXT[conf["language"]][key]
+
+
+# "Does this already exist?" in the words people use. A rule in the team rules was not enough for the
+# kit's maintainer: the weak point is remembering to look at all, so the reminder rides on the message.
+MARKET = re.compile("|".join([
+    r"go (out )?(and )?check", r"check (outside|again)", r"existing (solution|product|tool)s?",
+    r"off[- ]the[- ]shelf", r"on the market", r"who sells", r"(can|should) we (just )?buy",
+    r"(any|other) alternatives", r"solutions? (already|out there)", r"external (products?|solutions?|vendors?)",
+    r"must be (a |some )?(solution|product|tool)s?",
+    r"פתרו(ן|נות) קיי[םמ]", r"מה יש בשוק", r"מוצר מדף", r"מתחרים",
+]), re.IGNORECASE)
+MARKET_NOTE = ("The person's message asks what already exists on the market. Run /market-scan (a buy-first "
+               "breadth scan: new categories, platform partner lists, Israeli vendors, the company's approved "
+               "tools) before answering from the products already discussed. Widen, never deepen.")
+
+
+def market(ev):
+    """The /market-scan reminder, or None. Only for a message the person typed: background-task notices
+    and pasted documents reach this hook as "prompts" too, and their wording must never set it off."""
+    p = (ev.get("prompt") or "").strip()
+    if not p or len(p) > 1500 or p.startswith(("/", "<", "[SYSTEM")):
+        return None
+    if "<task-notification>" in p or "<system-reminder>" in p or "SYSTEM NOTIFICATION" in p:
+        return None
+    if not os.path.isfile(os.path.join(ROOT, "skills", "market-scan", "SKILL.md")):
+        return None                              # the skill is not in this build of the kit
+    return MARKET_NOTE if MARKET.search(p) else None
+
+
+def prompt(ev):
+    if cold(ev):
         return
-    print(json.dumps({"systemMessage": TEXT[conf["language"]]["nudge"]}))
+    out = {}
+    note = market(ev)
+    if note:
+        out["hookSpecificOutput"] = {"hookEventName": "UserPromptSubmit", "additionalContext": note}
+    line = nudge(ev, settings())
+    if line:
+        out["systemMessage"] = line
+    if out:
+        print(json.dumps(out))
+
+
+CLOSING = (
+    "Closing message next. Each line must pass: does the person already know it? If not, do they need it "
+    "to act? They already know: what they asked for or answered, the changes they requested, anything in a "
+    "file or draft they will open, how it was built, what you wrote to HANDOFF, OPEN or DECISIONS, and what "
+    "the next-step box says. Cut all of that. Usually 1-5 lines. Over 12 lines -> end with a bolded "
+    "bottom line (1-3 bullets) in their language.")
+
+
+def closing(ev):
+    """After the desktop app's wrap-up tool, right before Claude writes its closing message: the reply
+    rule sits far back in a long chat, so it is put in front of Claude at the moment it matters."""
+    if settings()["short_replies"]:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": CLOSING}}))
+
+
+def git(repo, *args):
+    import subprocess
+    return subprocess.run(["git", "-C", repo] + list(args), capture_output=True, text=True, timeout=20,
+                          encoding="utf-8", errors="replace")
+
+
+def save(ev):
+    """After Claude edits a file inside a git repo: record that one file as a local save point, so a
+    bad edit can be undone. Only where git already exists; nothing is ever sent off this computer.
+    Only the edited file is added - never the whole folder, which may hold client data."""
+    if not settings()["auto_save"] or "on-file-change" in own_hooks("PostToolUse"):
+        return                                   # switched off, or the person runs their own
+    path = (ev.get("tool_input") or {}).get("file_path") or ""
+    low = path.replace("\\", "/").lower()
+    name = os.path.basename(low)
+    if not path or name.startswith(".env") or "token_cache" in low or "/.git/" in low or "/.claude/" in low:
+        return                                   # never secrets or the app's own files
+    folder = os.path.dirname(os.path.abspath(path))
+    if not os.path.isdir(folder):
+        return
+    top = git(folder, "rev-parse", "--show-toplevel")
+    if top.returncode != 0 or not top.stdout.strip():
+        return                                   # not in a git repo (or no git): nothing to do
+    repo = top.stdout.strip()
+    if git(repo, "check-ignore", "-q", "--", path).returncode == 0:
+        return                                   # the repo says this file stays out
+    git(repo, "add", "--", path)
+    if git(repo, "diff", "--cached", "--quiet", "--", path).returncode == 0:
+        return                                   # nothing changed
+    who = []
+    if not git(repo, "config", "user.email").stdout.strip():
+        who = ["-c", "user.name=Claude auto-save", "-c", "user.email=auto-save@localhost"]
+    git(repo, *(who + ["commit", "--quiet", "-m", "auto: update %s" % os.path.basename(path), "--", path]))
 
 
 if __name__ == "__main__":
     try:
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
-        {"stop": stop, "start": start, "prompt": prompt}[mode](json.load(sys.stdin))
+        {"stop": stop, "start": start, "prompt": prompt, "closing": closing, "save": save}[mode](
+            json.load(sys.stdin))
     except Exception:
         pass
     sys.exit(0)

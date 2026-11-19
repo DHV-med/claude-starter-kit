@@ -20,6 +20,20 @@
           { "type": "command", "command": "powershell", "args": ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/hooks/run.ps1", "prompt"] }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__ccd_turn__wrap_up",
+        "hooks": [
+          { "type": "command", "command": "powershell", "args": ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/hooks/run.ps1", "closing"] }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "powershell", "args": ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/hooks/run.ps1", "save"] }
+        ]
+      }
     ]
   }
 }
