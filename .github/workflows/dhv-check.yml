@@ -1,0 +1,54 @@
+# DHV-med automatic check - runs on every upload. Do not edit this copy:
+# the master lives in DHV-med/tool-template and is copied into every repo daily.
+name: DHV check
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # whole history, so a password removed later is still caught
+
+      - name: Passwords and keys
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar -xz gitleaks
+          ./gitleaks git . --no-banner --redact -v || {
+            echo "## A password or key is saved in this repo" >> "$GITHUB_STEP_SUMMARY"
+            echo "Ask Claude: *the DHV check found a secret - remove it from the whole history and tell me which password to change.*" >> "$GITHUB_STEP_SUMMARY"
+            exit 1; }
+
+      - name: Client data, big files, README
+        if: always()   # report every problem in one go, even if a password was found
+        shell: python
+        run: |
+          import os, re, subprocess
+          files = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True).stdout.split("\0")
+          files = [f for f in files if f]
+          data_ext = (".xlsx", ".xls", ".xlsm", ".csv", ".dwg", ".dxf", ".msg")
+          problems = []
+          for f in files:
+              if f.lower().endswith(data_ext) and not f.startswith("samples/"):
+                  problems.append(f"Client data file saved in git: `{f}` - move it to the shared drive, or to samples/ if it is a small anonymised example")
+              if os.path.isfile(f) and os.path.getsize(f) > 5 * 1024 * 1024:
+                  problems.append(f"File over 5 MB: `{f}` - big files do not belong in git")
+              if re.search(r"(^|/)~\$|\.jsonl$", f):
+                  problems.append(f"Temp file or Claude chat log saved: `{f}`")
+          readme = next((f for f in files if f.lower() == "readme.md"), None)
+          if not readme:
+              problems.append("No README.md - every tool needs one (what it does, how to run it, Owner)")
+          else:
+              m = re.search(r"^\*{0,2}Owner:?\*{0,2}:?\s*(.*)$", open(readme, encoding="utf-8").read(), re.M | re.I)
+              if not m or m.group(1).strip(" *").lower() in ("", "your name"):   # starter repo placeholder
+                  problems.append("README has no `Owner:` line with a real name - every tool needs one named person")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as s:
+              if problems:
+                  s.write("## DHV check: fix these\n\n" + "\n".join("- " + p for p in problems) +
+                          "\n\nAsk Claude: *run /ship-check and fix what the DHV check found.*\n")
+              else:
+                  s.write("## DHV check passed\n")
+          for p in problems:
+              print("PROBLEM:", p)
+          raise SystemExit(1 if problems else 0)
