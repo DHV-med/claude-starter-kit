@@ -513,7 +513,8 @@ def cold(ev):
     current = os.path.isfile(longpath(notes)) and os.path.getmtime(longpath(notes)) >= then.timestamp() - 300
     away = t["minutes"] % idle if idle < 120 else t["hours"] % (idle / 60)
     reason = t["cold_head"] % away + (t["cold_current"] if current else t["cold_none"])
-    print(json.dumps({"decision": "block", "reason": reason}))
+    # the desktop app shows only a stop reason; a block's reason reaches the log alone (tested 2026-11-19)
+    print(json.dumps({"continue": False, "stopReason": reason, "decision": "block", "reason": reason}))
     return True
 
 

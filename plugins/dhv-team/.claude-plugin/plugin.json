@@ -1,7 +1,7 @@
 {
   "name": "dhv-team",
   "description": "DHV starter kit for Claude: team rules in Hebrew by default, /start as a guided tour (your work, your tools, a work folder, a first task), /guide, /check before sending, /handoff with open items and decisions and an automatic stop when a chat gets long, short answers, clear chat titles, plus /kickoff, /market-scan, /qa, /humanizer, /bulletproof, /context-coach, and /ship-check and /new-tool for tool builders",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "author": {
     "name": "Dan Ofek"
   }

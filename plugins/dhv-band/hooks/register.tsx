@@ -53,6 +53,8 @@ const mod = {
   isForking: false,
   transcriptPath: '',
   ttlTries: 0,
+  // Start was pressed: /start is running, so the button stays away this session
+  startPressed: false,
 }
 
 async function loadLanguage($: $): Promise<void> {
@@ -66,12 +68,12 @@ async function loadLanguage($: $): Promise<void> {
     if (!(await $.fs.exists(path))) {
       // no settings file: /start has never run
       await update($, lang, () => 'he')
-      await update($, needsStart, () => true)
+      await update($, needsStart, () => !mod.startPressed)
       return
     }
     const text = await $.fs.read(path)
     await update($, lang, () => langFromSettings(text))
-    await update($, needsStart, () => needsStartFromSettings(text))
+    await update($, needsStart, () => !mod.startPressed && needsStartFromSettings(text))
   } catch {
     // unreadable or malformed settings: the row stays empty
     await update($, lang, () => null).catch(() => undefined)
@@ -220,7 +222,11 @@ export const register: Register = on => {
   })
 
   on('turn.complete', async ($, e, next) => {
-    if (e.agentId === undefined) mod.isWorking = false
+    if (e.agentId === undefined) {
+      mod.isWorking = false
+      // /start may have just saved a language or finished a stage
+      await loadLanguage($)
+    }
 
     return next(e)
   })
@@ -294,6 +300,7 @@ export const register: Register = on => {
             label={words.start}
             variant="primary"
             onPress={async () => {
+              mod.startPressed = true
               await update($, needsStart, () => false)
               await runCommand($, 'start', words.noStart)
             }}
